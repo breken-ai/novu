@@ -215,4 +215,42 @@ describe('Expo', () => {
 
     expect(result.id).toEqual('501b1c08-292a-41d7-a36e-461c223e4744');
   });
+
+  test('should treat an unregistered device token as invalid', async () => {
+    const provider = new ExpoPushProvider({
+      accessToken: 'access-token',
+    });
+
+    // Expo's DeviceNotRegistered ticket: the app was uninstalled or the token expired
+    vi
+      // @ts-expect-error
+      .spyOn(provider.expo, 'sendPushNotificationsAsync')
+      .mockImplementation(async () => {
+        return [
+          {
+            status: 'error',
+            message: '"ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]" is not a registered push notification recipient',
+            details: { error: 'DeviceNotRegistered' },
+          },
+        ];
+      });
+
+    const error = await provider
+      .sendMessage({
+        title: 'Test',
+        content: 'Test push',
+        target: ['ExponentPushToken[xxxxxxxxxxxxxxxxxxxxxx]'],
+        payload: {},
+        subscriber: {},
+        step: {
+          digest: false,
+          events: [{}],
+          total_count: 1,
+        },
+      })
+      .catch((err: Error) => err);
+
+    expect(error).toBeInstanceOf(Error);
+    expect(provider.isTokenInvalid((error as Error).message)).toBe(true);
+  });
 });

@@ -8,7 +8,11 @@ import { PushBaseProvider } from '../push.base-provider';
 export class ExpoPushProvider extends PushBaseProvider implements IPushProvider {
   id = PushProviderIdEnum.EXPO;
   protected casing: CasingEnum = CasingEnum.CAMEL_CASE;
-  private readonly INVALID_TOKEN_ERRORS = ['not a valid Expo push token'];
+  private readonly INVALID_TOKEN_ERRORS = [
+    'not a valid Expo push token',
+    // DeviceNotRegistered: the app was uninstalled or the token expired
+    'is not a registered push notification recipient',
+  ];
 
   private expo: Expo;
   constructor(
