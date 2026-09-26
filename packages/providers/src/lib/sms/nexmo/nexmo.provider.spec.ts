@@ -91,3 +91,45 @@ test('should trigger nexmo library correctly with _passthrough', async () => {
     to: '+176543',
   });
 });
+
+test('should send from the from number given in the message options', async () => {
+  const provider = new NexmoSmsProvider({
+    apiKey: '<vonage-api-key>',
+    apiSecret: '<vonage-api-secret>',
+    from: '+112345',
+  });
+
+  const spy = vi
+
+    // @ts-expect-error
+    .spyOn(provider.vonageClient.sms, 'send')
+    .mockImplementation(async () => {
+      return {
+        'message-count': 1,
+        messages: [
+          {
+            'message-id': '123',
+            to: '1',
+            'message-price': '1',
+            'remaining-balance': '1',
+            status: '0' as never,
+            'account-ref': '1',
+            network: '1',
+          },
+        ],
+      } as any;
+    });
+
+  // e.g. `overrides: { sms: { from: 'NovuAlerts' } }` on the trigger
+  await provider.sendMessage({
+    to: '+176543',
+    from: 'NovuAlerts',
+    content: 'SMS Content',
+  });
+
+  expect(spy).toHaveBeenCalledWith({
+    from: 'NovuAlerts',
+    text: 'SMS Content',
+    to: '+176543',
+  });
+});
