@@ -373,6 +373,7 @@ export class IntegrationsController {
   }
 
   @Post('/:integrationId/auto-configure')
+  @HttpCode(HttpStatus.OK)
   @ApiResponse(AutoConfigureIntegrationResponseDto, 200)
   @ApiNotFoundResponse({
     description: 'The integration with the integrationId provided does not exist in the database.',
