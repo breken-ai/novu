@@ -1,4 +1,4 @@
-import { IEmailOptions } from '@novu/stateless';
+import { CheckIntegrationResponseEnum, IEmailOptions } from '@novu/stateless';
 import { expect, test, vi } from 'vitest';
 import { ResendEmailProvider } from './resend.provider';
 
@@ -124,4 +124,29 @@ test('should trigger resend email correctly with _passthrough', async () => {
     bcc: mockNovuMessage.bcc,
     text: mockNovuMessage.text,
   });
+});
+
+test('checkIntegration should fail when Resend rejects the API key', async () => {
+  // The Resend SDK returns API errors as `{ data: null, error }` instead of throwing
+  const fetchSpy = vi.fn(
+    async () =>
+      new Response(JSON.stringify({ statusCode: 401, name: 'validation_error', message: 'API key is invalid' }), {
+        status: 401,
+        headers: { 'content-type': 'application/json' },
+      })
+  );
+  vi.stubGlobal('fetch', fetchSpy);
+
+  try {
+    const provider = new ResendEmailProvider(mockConfig);
+
+    const result = await provider.checkIntegration(mockNovuMessage);
+
+    expect(fetchSpy).toHaveBeenCalled();
+    expect(result.success).toBe(false);
+    expect(result.message).toBe('API key is invalid');
+    expect(result.code).toBe(CheckIntegrationResponseEnum.FAILED);
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });

@@ -127,7 +127,7 @@ export class ResendEmailProvider extends BaseProvider implements IEmailProvider 
 
   async checkIntegration(options: IEmailOptions): Promise<ICheckIntegrationResponse> {
     try {
-      await this.resendClient.emails.send({
+      const response = await this.resendClient.emails.send({
         from: options.from || this.config.from,
         to: options.to,
         subject: options.subject,
@@ -141,6 +141,15 @@ export class ResendEmailProvider extends BaseProvider implements IEmailProvider 
         })),
         bcc: options.bcc,
       });
+
+      // The Resend SDK returns API errors (e.g. an invalid API key) instead of throwing them
+      if (response.error) {
+        return {
+          success: false,
+          message: isResendError(response) ? response.error.error : response.error.message,
+          code: CheckIntegrationResponseEnum.FAILED,
+        };
+      }
 
       return {
         success: true,
