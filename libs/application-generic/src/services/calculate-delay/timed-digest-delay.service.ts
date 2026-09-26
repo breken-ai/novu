@@ -161,7 +161,12 @@ export class TimedDigestDelayService {
         untilDate = addWeeks(dateStart, amount);
         break;
       case DigestUnitEnum.MONTHS:
-        untilDate = addMonths(dateStart, amount);
+        /*
+         * A monthly rule skips months that lack its day (a 31st, a fifth Monday), and the last
+         * weekday of next month can fall after today's date, so the next run can be more than
+         * `amount` months away. Search a year of periods.
+         */
+        untilDate = addMonths(dateStart, amount * 12);
         break;
       default:
         untilDate = addMonths(dateStart, amount);

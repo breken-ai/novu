@@ -206,6 +206,38 @@ describe('TimedDigestDelayService', () => {
         expect(result).toEqual(differenceInMilliseconds(new Date('2023-05-15T12:00:00.000Z'), new Date()));
       });
 
+      it('delay timeout for a month day that the next month does not have', () => {
+        // April has no 31st, so the next run is May 31, more than one month away
+        const result = TimedDigestDelayService.calculate({
+          dateStart: new Date('2023-04-10T12:00:00.000Z'),
+          unit: DigestUnitEnum.MONTHS,
+          amount: 1,
+          timeConfig: {
+            atTime: '09:00:00',
+            monthDays: [31],
+          },
+        });
+
+        expect(result).toEqual(differenceInMilliseconds(new Date('2023-05-31T09:00:00.000Z'), new Date()));
+      });
+
+      it('delay timeout for the last friday when the next one is more than a month away', () => {
+        // The last Friday of August 2023 is the 25th, the last Friday of September is the 29th
+        const result = TimedDigestDelayService.calculate({
+          dateStart: new Date('2023-08-26T12:00:00.000Z'),
+          unit: DigestUnitEnum.MONTHS,
+          amount: 1,
+          timeConfig: {
+            atTime: '09:00:00',
+            ordinal: OrdinalEnum.LAST,
+            ordinalValue: OrdinalValueEnum.FRIDAY,
+            monthlyType: MonthlyTypeEnum.ON,
+          },
+        });
+
+        expect(result).toEqual(differenceInMilliseconds(new Date('2023-09-29T09:00:00.000Z'), new Date()));
+      });
+
       describe('with "on the" fields', () => {
         describe('ordinal value "day"', () => {
           it('delay timeout for the first day of the month', () => {
