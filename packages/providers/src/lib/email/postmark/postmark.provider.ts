@@ -23,6 +23,7 @@ export class PostmarkEmailProvider extends BaseProvider implements IEmailProvide
     private config: {
       apiKey: string;
       from: string;
+      senderName?: string;
     }
   ) {
     super();
@@ -72,8 +73,11 @@ export class PostmarkEmailProvider extends BaseProvider implements IEmailProvide
   }
 
   private createMailData(options: IEmailOptions): Message {
+    const fromAddress = options.from || this.config.from;
+    const senderName = options.senderName || this.config.senderName;
+
     const mailData: Message = {
-      From: options.from || this.config.from,
+      From: senderName ? `${senderName} <${fromAddress}>` : fromAddress,
       To: getFormattedTo(options.to),
       HtmlBody: options.html,
       TextBody: options.html,

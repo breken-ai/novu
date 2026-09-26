@@ -168,3 +168,25 @@ test('should check provider integration correctly', async () => {
   expect(spy).toHaveBeenCalled();
   expect(response.success).toBe(true);
 });
+
+test('should send from the sender name given in the message options', async () => {
+  const provider = new PostmarkEmailProvider(mockConfig);
+  const spy = vi.spyOn((provider as any).client, 'sendEmail').mockImplementation(async () => {
+    return {};
+  });
+
+  await provider.sendMessage({ ...mockNovuMessage, senderName: 'Acme Support' });
+
+  expect(spy).toHaveBeenCalledWith(expect.objectContaining({ From: `Acme Support <${mockConfig.from}>` }));
+});
+
+test('should fall back to the integration sender name', async () => {
+  const provider = new PostmarkEmailProvider({ ...mockConfig, senderName: 'Acme' });
+  const spy = vi.spyOn((provider as any).client, 'sendEmail').mockImplementation(async () => {
+    return {};
+  });
+
+  await provider.sendMessage(mockNovuMessage);
+
+  expect(spy).toHaveBeenCalledWith(expect.objectContaining({ From: `Acme <${mockConfig.from}>` }));
+});
