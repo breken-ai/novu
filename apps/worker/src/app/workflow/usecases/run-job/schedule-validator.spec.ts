@@ -122,6 +122,53 @@ describe('ScheduleValidator', () => {
       expect(isWithinSchedule(schedule, tuesdayLate)).to.be.false;
     });
 
+    it('should not treat the evening after an overnight slot as part of it', () => {
+      const schedule: Schedule = {
+        isEnabled: true,
+        weeklySchedule: {
+          monday: {
+            isEnabled: true,
+            hours: [
+              { start: '09:00 AM', end: '05:00 PM' },
+              { start: '10:00 PM', end: '02:00 AM' },
+            ],
+          },
+          tuesday: {
+            isEnabled: false,
+          },
+        },
+      };
+
+      // Monday's slots ended at 2:00 AM on Tuesday; Tuesday itself is disabled
+      const tuesdayMorning = new Date('2024-01-02T10:00:00Z'); // Tuesday 10:00 AM UTC
+      expect(isWithinSchedule(schedule, tuesdayMorning)).to.be.false;
+
+      const tuesdayNight = new Date('2024-01-02T23:00:00Z'); // Tuesday 11:00 PM UTC
+      expect(isWithinSchedule(schedule, tuesdayNight)).to.be.false;
+
+      const tuesdayEarly = new Date('2024-01-02T01:00:00Z'); // Tuesday 1:00 AM UTC, still Monday's slot
+      expect(isWithinSchedule(schedule, tuesdayEarly)).to.be.true;
+    });
+
+    it('should not treat the early morning before an overnight slot as part of it', () => {
+      const schedule: Schedule = {
+        isEnabled: true,
+        weeklySchedule: {
+          monday: {
+            isEnabled: false,
+          },
+          tuesday: {
+            isEnabled: true,
+            hours: [{ start: '10:00 PM', end: '02:00 AM' }],
+          },
+        },
+      };
+
+      // Tuesday's slot starts at 10:00 PM on Tuesday; Monday night is disabled
+      const tuesdayEarly = new Date('2024-01-02T01:00:00Z'); // Tuesday 1:00 AM UTC
+      expect(isWithinSchedule(schedule, tuesdayEarly)).to.be.false;
+    });
+
     it('should return false when no hours are configured for the day', () => {
       const schedule: Schedule = {
         isEnabled: true,

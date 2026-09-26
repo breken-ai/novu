@@ -60,7 +60,9 @@ export function isWithinSchedule(schedule?: Schedule, currentTime: Date = new Da
     }
 
     // Check if current time falls within any of the configured time ranges
-    return daySchedule.hours.some((timeRange) => isTimeInRange(currentTimeString, timeRange));
+    const isPreviousDay = day !== currentDay;
+
+    return daySchedule.hours.some((timeRange) => isTimeInRange(currentTimeString, timeRange, isPreviousDay));
   });
 
   return result;
@@ -107,16 +109,24 @@ function formatTime(date: Date, hasTimezone = false): string {
 }
 
 /**
- * Checks if a time string falls within a time range
+ * Checks if a time string falls within a time range.
+ *
+ * An overnight range (e.g., 11:00 PM to 2:00 AM) covers its own day from the start time to
+ * midnight and the following day from midnight to the end time. `isPreviousDay` says the range
+ * belongs to the day before the one `time` is on, so only its after-midnight part can match.
  */
-function isTimeInRange(time: string, range: TimeRange): boolean {
+function isTimeInRange(time: string, range: TimeRange, isPreviousDay = false): boolean {
   const timeInMinutes = timeToMinutes(time);
   const startInMinutes = timeToMinutes(range.start);
   const endInMinutes = timeToMinutes(range.end);
 
   // Handle cases where the end time is the next day (e.g., 11:00 PM to 2:00 AM)
   if (endInMinutes < startInMinutes) {
-    return timeInMinutes >= startInMinutes || timeInMinutes <= endInMinutes;
+    return isPreviousDay ? timeInMinutes <= endInMinutes : timeInMinutes >= startInMinutes;
+  }
+
+  if (isPreviousDay) {
+    return false;
   }
 
   return timeInMinutes >= startInMinutes && timeInMinutes <= endInMinutes;
