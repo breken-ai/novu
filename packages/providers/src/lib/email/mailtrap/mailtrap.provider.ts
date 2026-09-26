@@ -21,6 +21,7 @@ export class MailtrapEmailProvider extends BaseProvider implements IEmailProvide
     private config: {
       apiKey: string;
       from: string;
+      senderName?: string;
     }
   ) {
     super();
@@ -63,7 +64,7 @@ export class MailtrapEmailProvider extends BaseProvider implements IEmailProvide
     return this.mailtrapClient.send(
       this.transform<Mail>(bridgeProviderData, {
         to: options.to.map(this.mapAddress),
-        from: this.mapAddress(options.from || this.config.from),
+        from: this.mapSender(options.from || this.config.from, options.senderName || this.config.senderName),
         subject: options.subject,
         text: options.text,
         html: options.html,
@@ -84,5 +85,9 @@ export class MailtrapEmailProvider extends BaseProvider implements IEmailProvide
 
   private mapAddress(email: string): Address {
     return { email };
+  }
+
+  private mapSender(email: string, name?: string): Address {
+    return name ? { email, name } : { email };
   }
 }

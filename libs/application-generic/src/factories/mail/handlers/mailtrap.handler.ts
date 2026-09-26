@@ -8,9 +8,10 @@ export class MailtrapHandler extends BaseEmailHandler {
   }
 
   buildProvider(credentials: ICredentials, from: string) {
-    const config: { apiKey: string; from: string } = {
+    const config: { apiKey: string; from: string; senderName?: string } = {
       from: from as string,
       apiKey: credentials.apiKey as string,
+      senderName: credentials.senderName,
     };
 
     this.provider = new MailtrapEmailProvider(config);

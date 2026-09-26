@@ -48,3 +48,23 @@ test('should check integration successfully', async () => {
     code: CheckIntegrationResponseEnum.SUCCESS,
   });
 });
+
+test('should send from the sender name given in the message options', async () => {
+  const provider = new MailtrapEmailProvider(mockConfig);
+  const spy = vi.spyOn(MailtrapClient.prototype, 'send').mockImplementation(async () => mockMailtrapResponse);
+
+  await provider.sendMessage({ ...mockNovuMessage, senderName: 'Acme Support' });
+
+  expect(spy).toHaveBeenCalledWith(
+    expect.objectContaining({ from: { email: mockNovuMessage.from, name: 'Acme Support' } })
+  );
+});
+
+test('should fall back to the integration sender name', async () => {
+  const provider = new MailtrapEmailProvider({ ...mockConfig, senderName: 'Acme' });
+  const spy = vi.spyOn(MailtrapClient.prototype, 'send').mockImplementation(async () => mockMailtrapResponse);
+
+  await provider.sendMessage(mockNovuMessage);
+
+  expect(spy).toHaveBeenCalledWith(expect.objectContaining({ from: { email: mockNovuMessage.from, name: 'Acme' } }));
+});
