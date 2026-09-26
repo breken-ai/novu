@@ -1,6 +1,28 @@
 import type { TagsFilter } from '@novu/shared';
 import { TagsFilterValidationError } from '@novu/shared';
 
+/** A value as Express's extended (qs) query parser produces it. */
+type QueryParamValue = string | number | boolean | null | undefined | QueryParamValue[] | QueryParamObject;
+type QueryParamObject = { [key: string]: QueryParamValue };
+
+/**
+ * qs (Express's extended query parser) builds arrays of at most 20 entries (`arrayLimit`).
+ * Past that it returns an object keyed by index, so `tags[]=a&tags[]=b&...` with 21+ tags
+ * arrives as `{ 0: 'a', 1: 'b', ... }`. Turn such an object back into the array it was.
+ */
+function indexedObjectToArray(value: QueryParamValue): QueryParamValue {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return value;
+  }
+
+  const keys = Object.keys(value);
+  if (keys.length === 0 || !keys.every((key) => /^\d+$/.test(key))) {
+    return value;
+  }
+
+  return keys.sort((a, b) => Number(a) - Number(b)).map((key) => value[key]);
+}
+
 /**
  * Coerce Express query / mixed shapes into `TagsFilter` for validation + normalization.
  */
@@ -18,18 +40,17 @@ export function parseTagsQueryValue(value: unknown): TagsFilter | undefined {
       return [];
     }
 
-    const first = value[0];
+    const items = (value as QueryParamValue[]).map(indexedObjectToArray);
+    const first = items[0];
     if (Array.isArray(first)) {
-      const groups = (value as unknown[][]).map((group) =>
-        Array.isArray(group) ? group.map((t) => String(t)) : [String(group)]
-      );
+      const groups = items.map((group) => (Array.isArray(group) ? group.map((t) => String(t)) : [String(group)]));
 
       return {
         and: groups.map((g) => ({ or: g })),
       };
     }
 
-    return (value as unknown[]).map((t) => String(t));
+    return items.map((t) => String(t));
   }
 
   if (typeof value === 'object') {
@@ -76,10 +97,16 @@ export function parseTagsQueryValue(value: unknown): TagsFilter | undefined {
     }
 
     const keys = Object.keys(record).sort((a, b) => Number(a) - Number(b));
+
+    // A flat tag list over the qs array limit: every entry is a single tag, so it is one OR-group.
+    if (keys.length > 0 && keys.every((key) => /^\d+$/.test(key) && !isGroupValue(record[key] as QueryParamValue))) {
+      return keys.map((key) => String(record[key]));
+    }
+
     const groups: string[][] = [];
 
     for (const key of keys) {
-      const group = record[key];
+      const group = indexedObjectToArray(record[key] as QueryParamValue);
       if (Array.isArray(group)) {
         groups.push(group.map((t) => String(t)));
       } else if (group !== undefined && group !== null) {
@@ -106,4 +133,8 @@ export function parseTagsQueryValue(value: unknown): TagsFilter | undefined {
   }
 
   return undefined;
+}
+
+function isGroupValue(value: QueryParamValue): boolean {
+  return Array.isArray(value) || (typeof value === 'object' && value !== null);
 }

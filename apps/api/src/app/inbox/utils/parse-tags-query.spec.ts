@@ -31,4 +31,25 @@ describe('parseTagsQueryValue', () => {
   it('parses explicit { or }', () => {
     expect(parseTagsQueryValue({ or: [1, 'x'] })).to.deep.equal({ or: ['1', 'x'] });
   });
+
+  /*
+   * Express parses the query string with qs, which stops building arrays past 20 entries
+   * (`arrayLimit`) and returns an object keyed by index instead. The inbox SDK sends a flat
+   * tag list as repeated `tags[]=`, so 21+ tags reach this function as `{ 0: 'a', 1: 'b', ... }`.
+   */
+  it('parses an index-keyed object of single tags (a flat list over the qs array limit) as one OR-group', () => {
+    const tags = Array.from({ length: 21 }, (_, index) => `tag-${index}`);
+    const overflowed = Object.fromEntries(tags.map((tag, index) => [String(index), tag]));
+
+    expect(parseTagsQueryValue(overflowed)).to.deep.equal(tags);
+  });
+
+  it('parses an OR-group over the qs array limit inside an AND filter', () => {
+    const group = Array.from({ length: 21 }, (_, index) => `tag-${index}`);
+    const overflowedGroup = Object.fromEntries(group.map((tag, index) => [String(index), tag]));
+
+    expect(parseTagsQueryValue([overflowedGroup, ['other']])).to.deep.equal({
+      and: [{ or: group }, { or: ['other'] }],
+    });
+  });
 });
